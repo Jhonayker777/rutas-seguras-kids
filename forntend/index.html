@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Rutas Seguras Kids | Gestión Escolar</title>
+  
+  <!-- HOJA DE ESTILOS SEPARADA -->
+  <link rel="stylesheet" href="styles.css">
+  
+  <!-- FONT AWESOME (SOLO ICONOS, NO ES FRAMEWORK JS) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+
+  <!-- =============================================== -->
+  <!-- CONTENEDOR PRINCIPAL DE LA APLICACIÓN           -->
+  <!-- =============================================== -->
+  <div class="app-container">
+
+    <!-- ================= HEADER ================= -->
+    <!-- CONTIENE TÍTULO Y WIDGET DEL CLIMA (ACTUALIZADO POR API) -->
+    <header class="main-header">
+      <div class="logo-area">
+        <i class="fas fa-school"></i>
+        <h1>Rutas Seguras <span>Kids</span></h1>
+      </div>
+      <div class="weather-widget" id="weatherWidget">
+        <i class="fas fa-cloud-sun"></i>
+        <span id="weatherInfo">Cargando clima...</span>
+      </div>
+    </header>
+
+    <!-- ================= PANEL DE FORMULARIOS ================= -->
+    <div class="dashboard">
+      
+      <!-- ------------------------------------------------------ -->
+      <!-- TARJETA 1: FORMULARIO PARA CREAR O EDITAR RUTAS       -->
+      <!-- ------------------------------------------------------ -->
+      <div class="form-card">
+        <h2><i class="fas fa-bus"></i> Gestionar Ruta</h2>
+        <form id="routeForm">
+          <!-- CAMPO OCULTO: GUARDA EL ID DE LA RUTA EN EDICIÓN (VACÍO SI ES NUEVA) -->
+          <input type="hidden" id="editRouteId" value="">
+          
+          <div class="input-group">
+            <label><i class="fas fa-road"></i> Nombre ruta</label>
+            <input type="text" id="routeName" placeholder="Ej: Ruta Norte" required>
+          </div>
+          
+          <div class="input-group">
+            <label><i class="fas fa-user-circle"></i> Conductor</label>
+            <input type="text" id="driverName" placeholder="Nombre del conductor" required>
+          </div>
+          
+          <div class="input-group">
+            <label><i class="fas fa-clock"></i> Hora salida</label>
+            <input type="time" id="departureTime" required>
+          </div>
+          
+          <div class="form-buttons">
+            <button type="submit" class="btn primary"><i class="fas fa-save"></i> Guardar ruta</button>
+            <button type="button" id="cancelEditBtn" class="btn secondary hidden"><i class="fas fa-times"></i> Cancelar</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- ------------------------------------------------------ -->
+      <!-- TARJETA 2: FORMULARIO PARA ASIGNAR ESTUDIANTES        -->
+      <!-- ------------------------------------------------------ -->
+      <div class="form-card">
+        <h2><i class="fas fa-user-plus"></i> Asignar Estudiante</h2>
+        <form id="studentForm">
+          <div class="input-group">
+            <label><i class="fas fa-child"></i> Nombre estudiante</label>
+            <input type="text" id="studentName" placeholder="Ej: María josé" required>
+          </div>
+          <div class="input-group">
+            <label><i class="fas fa-route"></i> Seleccionar Ruta</label>
+            <select id="routeSelect" required>
+              <option value="">-- Elige una ruta --</option>
+            </select>
+          </div>
+          <button type="submit" class="btn success"><i class="fas fa-plus-circle"></i> Asignar estudiante</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ================= SECCIÓN DE LISTADO DE RUTAS ================= -->
+    <!-- AQUÍ SE INYECTARÁN DINÁMICAMENTE LOS WEB COMPONENTS <route-card> -->
+    <section class="routes-section">
+      <h2><i class="fas fa-map-marked-alt"></i> Rutas Activas</h2>
+      <div id="routesContainer" class="routes-grid">
+        <!-- MENSAJE INICIAL CUANDO NO HAY RUTAS (SE REEMPLAZARÁ CON JS) -->
+        <div class="empty-message">No hay rutas creadas. ¡Agrega una!</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- =============================================== -->
+  <!-- TEMPLATE PARA EL WEB COMPONENT <route-card>     -->
+  <!-- SE USA CON SHADOW DOM PARA ENCAPSULAR ESTILOS   -->
+  <!-- =============================================== -->
+  <template id="routeCardTemplate">
+    <!-- ESTILOS ENCAPSULADOS DENTRO DEL SHADOW DOM (NO AFECTAN AL RESTO DE LA APP) -->
+    <style>
+      .route-card {
+        background: white;
+        border-radius: 24px;
+        box-shadow: 0 12px 28px rgba(0,0,0,0.1);
+        overflow: hidden;
+        transition: transform 0.2s ease, box-shadow 0.2s;
+        border: 1px solid #eef2f6;
+      }
+      .route-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 30px -12px rgba(0,0,0,0.2);
+      }
+      .card-header {
+        background: linear-gradient(135deg, #2b6e9e, #1e4a6e);
+        color: white;
+        padding: 1rem 1.2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .route-title {
+        font-size: 1.3rem;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .route-actions {
+        display: flex;
+        gap: 12px;
+      }
+      .route-actions button {
+        background: rgba(255,255,255,0.2);
+        border: none;
+        color: white;
+        font-size: 0.9rem;
+        cursor: pointer;
+        border-radius: 30px;
+        padding: 5px 10px;
+        transition: 0.2s;
+      }
+      .route-actions button:hover { background: rgba(255,255,255,0.4); }
+      .delete-route { background: rgba(220,53,69,0.7); }
+      .delete-route:hover { background: #dc3545 !important; }
+      .card-body {
+        padding: 1rem;
+      }
+      .info-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+        font-size: 0.9rem;
+        color: #2c3e4e;
+      }
+      .info-row i { width: 20px; color: #2b6e9e; }
+      .students-list {
+        margin-top: 15px;
+        border-top: 1px dashed #cbd5e1;
+        padding-top: 12px;
+      }
+      .students-title {
+        font-weight: 600;
+        margin-bottom: 8px;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #4b5563;
+      }
+      .student-item {
+        background: #f8fafc;
+        padding: 6px 12px;
+        border-radius: 40px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 4px 6px 4px 0;
+        font-size: 0.8rem;
+      }
+      .student-item button {
+        background: none;
+        border: none;
+        color: #dc2626;
+        cursor: pointer;
+        font-size: 0.7rem;
+        font-weight: bold;
+      }
+      .no-students {
+        color: #94a3b8;
+        font-style: italic;
+        font-size: 0.8rem;
+      }
+    </style>
+    
+    <!-- ESTRUCTURA HTML DE CADA TARJETA DE RUTA -->
+    <div class="route-card">
+      <div class="card-header">
+        <div class="route-title">
+          <i class="fas fa-bus"></i>
+          <span class="route-name-display">Nombre ruta</span>
+        </div>
+        <div class="route-actions">
+          <button class="edit-route-btn" title="Editar ruta"><i class="fas fa-edit"></i> Editar</button>
+          <button class="delete-route-btn delete-route" title="Eliminar ruta"><i class="fas fa-trash-alt"></i> Eliminar</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="info-row">
+          <i class="fas fa-user-check"></i>
+          <span><strong>Conductor:</strong> <span class="driver-display"></span></span>
+        </div>
+        <div class="info-row">
+          <i class="fas fa-hourglass-start"></i>
+          <span><strong>Salida:</strong> <span class="time-display"></span></span>
+        </div>
+        <div class="students-list">
+          <div class="students-title"><i class="fas fa-users"></i> Estudiantes asignados</div>
+          <div class="students-container"></div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- =============================================== -->
+  <!-- ARCHIVO JAVASCRIPT PRINCIPAL (SEPARADO)         -->
+  <!-- =============================================== -->
+  <script src="/javaScript/app.js"></script>
+</body>
+</html>
