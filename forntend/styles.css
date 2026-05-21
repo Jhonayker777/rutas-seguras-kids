@@ -203,9 +203,33 @@ button {
 /* ========== CLASE PARA ERRORES ========== */
 .error-input {
     border-color: #e74c3c !important;
-    background-color: #ffe6e6;
+    background-color: #ffe6e6; 
 }
 
+.toast-alerta {
+    position: absolute;
+    background-color: #ff4444;
+    color: white;
+    padding: 8px 15px;
+    border-radius: 4px;
+    font-size: 14px;
+    margin-top: -10;
+    margin-left: 10px;
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 100;
+}
+
+.toast-alerta.mostrar {
+    opacity: 1;
+    margin-top: 5px;
+}
+
+.campo {
+    position: relative;
+}
 .error-mensaje {
     color: #e74c3c;
     font-size: 12px;

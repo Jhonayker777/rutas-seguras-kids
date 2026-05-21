@@ -1,219 +1,111 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rutas Seguras Kids</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rutas Seguras Kids</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
 
-    <!-- ========== CONTENEDOR PRINCIPAL ========== -->
-    <div class="contenedor">
+  <!-- ========== CONTENEDOR PRINCIPAL ========== -->
+  <div class="contenedor">
 
-        <!-- ========== HEADER ========== -->
-        <div class="header">
-            <div class="logo">
-                <h1>🚌 Rutas Seguras <span>Kids</span></h1>
-            </div>
-            <div class="clima" id="clima">
-                <span>🌤️ Cargando clima...</span>
-            </div>
-        </div>
-
-        <!-- ========== FORMULARIOS ========== -->
-        <div class="formularios">
-
-            <!-- FORMULARIO 1: Gestionar Ruta -->
-            <div class="tarjeta">
-                <h2>📋 Gestionar Ruta</h2>
-                <form id="formRuta">
-                    <!-- Campo oculto para saber si estamos editando -->
-                    <input type="hidden" id="editandoId" value="">
-                    
-                    <div class="campo">
-                        <label>Nombre de la ruta:</label>
-                        <input type="text" id="nombreRuta" placeholder="Ej: Ruta Norte" required>
-                    </div>
-
-                    <div class="campo">
-                        <label>Conductor:</label>
-                        <input type="text" id="conductor" placeholder="Ej: Juan Pérez" required>
-                    </div>
-
-                    <div class="campo">
-                        <label>Hora de salida:</label>
-                        <input type="time" id="horaSalida" required>
-                    </div>
-
-                    <div class="grupo-botones">
-                        <button type="submit" class="btn-guardar">💾 Guardar Ruta</button>
-                        <button type="button" id="cancelarBtn" class="btn-cancelar oculto">❌ Cancelar</button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- FORMULARIO 2: Asignar Estudiante -->
-            <div class="tarjeta">
-                <h2>👨‍🎓 Asignar Estudiante</h2>
-                <form id="formEstudiante">
-                    <div class="campo">
-                        <label>Nombre del estudiante:</label>
-                        <input type="text" id="nombreEstudiante" placeholder="Ej: María López" required>
-                    </div>
-
-                    <div class="campo">
-                        <label>Seleccionar ruta:</label>
-                        <select id="selectRuta" required>
-                            <option value="">-- Selecciona una ruta --</option>
-                        </select>
-                    </div>
-
-                    <button type="submit" class="btn-asignar">➕ Asignar Estudiante</button>
-                </form>
-            </div>
-        </div>
-
-        <!-- ========== LISTA DE RUTAS ========== -->
-        <div class="seccion-rutas">
-            <h2>🚍 Mis Rutas</h2>
-            <div id="contenedorRutas" class="lista-rutas">
-                <div class="mensaje-vacio">✨ No hay rutas. ¡Crea una!</div>
-            </div>
-        </div>
-
-        <!-- ========== ESTADÍSTICAS ========== -->
-        <div class="estadisticas">
-            <div class="caja-estadistica">
-                <div class="numero" id="totalRutas">0</div>
-                <div class="texto">Total Rutas</div>
-            </div>
-            <div class="caja-estadistica">
-                <div class="numero" id="totalEstudiantes">0</div>
-                <div class="texto">Estudiantes</div>
-            </div>
-            <div class="caja-estadistica">
-                <div class="numero" id="promedioRuta">0</div>
-                <div class="texto">Promedio por Ruta</div>
-            </div>
-        </div>
-
+    <!-- ========== HEADER ========== -->
+    <div class="header">
+      <div class="logo">
+        <h1>🚌 Rutas Seguras <span>Kids</span></h1>
+      </div>
+      <div class="clima" id="clima">
+        <span>🌤️ Cargando clima...</span>
+      </div>
     </div>
 
-    <!-- ========== TEMPLATE PARA WEB COMPONENT ========== -->
-    <!-- Este template se usará dentro del Shadow DOM -->
-    <template id="tarjetaTemplate">
-        <style>
-            /* Estilos que SOLO afectan a esta tarjeta */
-            .tarjeta-ruta {
-                background: white;
-                border-radius: 12px;
-                overflow: hidden;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                margin-bottom: 15px;
-            }
-            .cabecera {
-                background: #2c3e50;
-                color: white;
-                padding: 12px 15px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            .cabecera h3 {
-                margin: 0;
-                font-size: 1.1rem;
-            }
-            .botones {
-                display: flex;
-                gap: 8px;
-            }
-            .botones button {
-                background: rgba(255,255,255,0.2);
-                border: none;
-                color: white;
-                padding: 5px 10px;
-                border-radius: 5px;
-                cursor: pointer;
-            }
-            .botones button:hover {
-                background: rgba(255,255,255,0.4);
-            }
-            .contenido {
-                padding: 15px;
-            }
-            .info {
-                margin-bottom: 15px;
-                padding-bottom: 10px;
-                border-bottom: 1px solid #eee;
-            }
-            .info p {
-                margin: 5px 0;
-                color: #555;
-            }
-            .lista {
-                margin-top: 10px;
-            }
-            .lista h4 {
-                margin: 0 0 10px 0;
-                color: #2c3e50;
-            }
-            .estudiantes {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 8px;
-            }
-            .estudiante {
-                background: #ecf0f1;
-                padding: 4px 10px;
-                border-radius: 20px;
-                display: inline-flex;
-                align-items: center;
-                gap: 8px;
-                font-size: 13px;
-            }
-            .borrar-estudiante {
-                background: none;
-                border: none;
-                color: #e74c3c;
-                cursor: pointer;
-                font-weight: bold;
-            }
-            .sin-estudiantes {
-                color: #999;
-                font-style: italic;
-                font-size: 13px;
-            }
-            @media (max-width: 768px) {
-                .cabecera {
-                    flex-direction: column;
-                    text-align: center;
-                    gap: 8px;
-                }
-            }
-        </style>
-        
-        <div class="tarjeta-ruta">
-            <div class="cabecera">
-                <h3 class="nombre-ruta">Nombre</h3>
-                <div class="botones">
-                    <button class="editar-btn">✏️ Editar</button>
-                    <button class="eliminar-btn">🗑️ Eliminar</button>
-                </div>
-            </div>
-            <div class="contenido">
-                <div class="info">
-                    <p>🚍 Conductor: <span class="conductor-texto"></span></p>
-                    <p>⏰ Hora: <span class="hora-texto"></span></p>
-                </div>
-                <div class="lista">
-                    <h4>📚 Estudiantes asignados:</h4>
-                    <div class="estudiantes"></div>
-                </div>
-            </div>
-        </div>
-    </template>
+    <!-- ========== FORMULARIOS ========== -->
+    <div class="formularios">
 
-    <script src="/javaScript/app.js"></script>
+      <!-- FORMULARIO 1: Gestionar Ruta -->
+      <div class="tarjeta">
+        <h2>📋 Gestionar Ruta</h2>
+        <form id="formRuta">
+          <!-- Campo oculto para saber si estamos editando -->
+          <input type="hidden" id="editandoId" value="">
+
+          <div id="contenedor-input-ruta" class="campo">
+            <label>Nombre de la ruta:</label>
+            <input type="text" id="nombreRuta" placeholder="Ej: Ruta Norte" >
+            
+          </div>
+
+          <div id="contenedor-input-conductor" class="campo">
+            <label>Conductor:</label>
+            <input type="text" id="conductor" placeholder="Ej: Juan Pérez" >
+          </div>
+
+          <div id="contenedor-hora-salida" class="campo">
+            <label>Hora de salida:</label>
+            <input type="time" id="horaSalida" >
+          </div>
+
+          <div class="grupo-botones">
+            <button type="submit" class="btn-guardar">💾 Guardar Ruta</button>
+            <!--<button type="button" id="cancelarBtn" class="btn-cancelar">❌ Cancelar</button>-->
+          </div>
+        </form>
+      </div>
+
+      <!-- FORMULARIO 2: Asignar Estudiante -->
+      <div class="tarjeta">
+        <h2>👨‍🎓 Asignar Estudiante</h2>
+        <form id="formEstudiante">
+          <div class="campo">
+            <label>Nombre del estudiante:</label>
+            <input type="text" id="nombreEstudiante" placeholder="Ej: María López" >
+          </div>
+
+          <div class="campo">
+            <label>Seleccionar ruta:</label>
+            <select id="selectRuta" required>
+              <option value="">-- Selecciona una ruta --</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn-asignar">➕ Asignar Estudiante</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ========== LISTA DE RUTAS ========== -->
+    <div class="seccion-rutas">
+      <h2>🚍 Mis Rutas</h2>
+      <div id="contenedorRutas" class="lista-rutas">
+        <div class="mensaje-vacio">✨ No hay rutas. ¡Crea una!</div>
+      </div>
+    </div>
+
+    <!-- ========== ESTADÍSTICAS ========== -->
+    <div class="estadisticas">
+      <div class="caja-estadistica">
+        <div class="numero" id="totalRutas">0</div>
+        <div class="texto">Total Rutas</div>
+      </div>
+      <div class="caja-estadistica">
+        <div class="numero" id="totalEstudiantes">0</div>
+        <div class="texto">Estudiantes</div>
+      </div>
+      <div class="caja-estadistica">
+        <div class="numero" id="promedioRuta">0</div>
+        <div class="texto">Promedio por Ruta</div>
+      </div>
+    </div>
+
+  </div>
+
+
+
+  <script src="/javaScript/app.js"></script>
 </body>
+
 </html>
