@@ -1,5 +1,9 @@
 let rutas = [];
 
+//API
+const ApiKey = '5181b53cb00c4ea7859183859262305'; 
+const CIUDAD_POR_DEFECTO = 'Bucaramanga';
+
 // Formularios
 const formularioRuta = document.getElementById('formRuta');
 const formularioEstudiante = document.getElementById('formEstudiante');
@@ -85,14 +89,13 @@ function limpiarErrores() {
     // Limpiar errores de rutas
     const errores = document.querySelectorAll('#formRuta .toast-alerta');
     errores.forEach(error => error.remove());
-
     const inputsConError = document.querySelectorAll('#formRuta .error-input');
     inputsConError.forEach(input => input.classList.remove('error-input'));
+
 
     // Limpiar errores de estudiantes
     const erroresEstudiante = document.querySelectorAll('#formEstudiante .toast-alerta');
     erroresEstudiante.forEach(error => error.remove());
-
     const inputsEstudianteError = document.querySelectorAll('#formEstudiante .error-input');
     inputsEstudianteError.forEach(input => input.classList.remove('error-input'));
 }
@@ -136,7 +139,9 @@ function validacionesEstudiante() {
     return validado;
 }
 
+//Limpiar formularios
 function clear(tipoformulario) {
+    
     if (tipoformulario === formularioRuta) {
         const todosLosInputs = document.querySelectorAll('#formRuta input');
         todosLosInputs.forEach(input => {
@@ -157,7 +162,7 @@ function clear(tipoformulario) {
         inputNombreEstudiante.classList.remove("error-input");
         selectRuta.classList.remove("error-input");
 
-        // Limpiar mensajes de error del formulario de estudiantes
+        
         const erroresEstudiante = document.querySelectorAll('#formEstudiante .toast-alerta');
         erroresEstudiante.forEach(error => error.remove());
 
@@ -673,3 +678,151 @@ customElements.define("div-tarjeta", tarjeta);
 
 // Inicializar estadisticas
 actualizarEstadisticas();
+
+// API DEL CLIMA 
+
+
+async function cargarClima() {
+    const contenedorClima = document.getElementById('clima');
+    
+    if (!contenedorClima) {
+        console.error('Contenedor de clima no encontrado');
+        return;
+    }
+    
+    try {
+       
+        contenedorClima.innerHTML = '<span class="clima-cargando"> Cargando clima...</span>';
+        
+        
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    // Si el usuario permite ubicación, usar coordenadas
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    await obtenerClimaPorCoordenadas(lat, lon);
+                },
+                async () => {
+                    // Si no permite ubicación, usar ciudad por defecto
+                    await obtenerClimaPorCiudad(CIUDAD_POR_DEFECTO);
+                }
+            );
+        } else {
+            // Si el navegador no soporta geolocalización, usar ciudad por defecto
+            await obtenerClimaPorCiudad(CIUDAD_POR_DEFECTO);
+        }
+        
+    } catch (error) {
+        console.warn('Error al cargar el clima:', error);
+        contenedorClima.innerHTML = '<span class="clima-cargando"> Error al cargar el clima</span>'
+    }
+}
+
+async function obtenerClimaPorCiudad(ciudad) {
+    const contenedorClima = document.getElementById('clima');
+    
+    
+    try {
+        const respuesta = await fetch(
+            `https://api.weatherapi.com/v1/current.json?key=${ApiKey}&q=${ciudad}&lang=es`
+        );
+        
+        if (!respuesta.ok) {
+            throw new Error(`Error ${respuesta.status}: No se pudo obtener el clima`);
+        }
+        
+        const datos = await respuesta.json();
+        actualizarInterfazClima(datos);
+        
+    } catch (error) {
+        console.warn('Error obteniendo clima por ciudad:', error);
+        contenedorClima.innerHTML = '<span class="clima-cargando"> Error al cargar el clima</span>'
+    }
+}
+
+async function obtenerClimaPorCoordenadas(lat, lon) {
+    
+    const contenedorClima = document.getElementById('clima');
+    
+    
+    try {
+        const respuesta = await fetch(
+            `https://api.weatherapi.com/v1/current.json?key=${ApiKey}&q=${lat},${lon}&lang=es`
+        );
+        
+        if (!respuesta.ok) {
+            throw new Error(`Error ${respuesta.status}: No se pudo obtener el clima`);
+        }
+        
+        const datos = await respuesta.json();
+        actualizarInterfazClima(datos);
+        
+    } catch (error) {
+        console.error('Error obteniendo clima por coordenadas:', error);
+        await obtenerClimaPorCiudad(CIUDAD_POR_DEFECTO);
+    }
+}
+
+function actualizarInterfazClima(datos) {
+    
+    const contenedorClima = document.getElementById('clima');
+    
+    
+    // Extraer datos
+    const temperatura = Math.round(datos.current.temp_c);
+    const sensacionTermica = Math.round(datos.current.feelslike_c);
+    const descripcion = datos.current.condition.text;
+    const humedad = datos.current.humidity;
+    const viento = Math.round(datos.current.wind_kph);
+    const ciudad = datos.location.name;
+    const pais = datos.location.country;
+    const iconoUrl = `https:${datos.current.condition.icon}`;
+    const horaLocal = datos.location.localtime;
+    const esDeNoche = datos.current.is_day === 0;
+    
+    
+    contenedorClima.innerHTML = `
+        <div class="clima-contenedor">
+            <div class="clima-principal">
+                <img src="${iconoUrl}" alt="${descripcion}" class="clima-icono">
+                <div class="clima-temperatura">
+                    <span class="temp-valor">${temperatura}</span>
+                    <span class="temp-unidad">°C</span>
+                </div>
+            </div>
+            <div class="clima-detalles">
+                <div class="clima-ciudad">${ciudad}, ${pais}</div>
+                <div class="clima-descripcion">${descripcion}</div>
+                <div class="clima-extra">
+                    <span class="clima-humedad">💧 ${humedad}%</span>
+                    <span class="clima-viento">🌬️ ${viento} km/h</span>
+                    <span class="clima-sensacion">🌡️ Sensación: ${sensacionTermica}°C</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    
+    if (esDeNoche) {
+        contenedorClima.classList.add('clima-nocturno');
+    } else {
+        contenedorClima.classList.remove('clima-nocturno');
+    }
+    
+    console.log(`Clima actualizado: ${ciudad} - ${temperatura}°C - ${descripcion}`);
+}
+
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Pequeño delay para asegurar que el DOM está listo
+    setTimeout(() => {
+        cargarClima();
+    }, 2000);
+    
+    // Actualizar clima 
+    setInterval(() => {
+        cargarClima();
+        console.log('Actualizando clima automáticamente...');
+    }, 900000);
+});
