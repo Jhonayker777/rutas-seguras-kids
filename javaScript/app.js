@@ -1,8 +1,12 @@
+
 let rutas = [];
 
+//LocalStorage
+const storageKey = 'rutas_seguras_kids';
+
 //API
-const ApiKey = '5181b53cb00c4ea7859183859262305'; 
-const CIUDAD_POR_DEFECTO = 'Bucaramanga';
+const ApiKey = '5181b53cb00c4ea7859183859262305';
+const ciudadPorDeficto = 'Bucaramanga';
 
 // Formularios
 const formularioRuta = document.getElementById('formRuta');
@@ -12,7 +16,6 @@ const formularioEstudiante = document.getElementById('formEstudiante');
 const inputNombreRuta = document.getElementById('nombreRuta');
 const inputConductor = document.getElementById('conductor');
 const inputHoraSalida = document.getElementById('horaSalida');
-const inputIdEditando = document.getElementById('editandoId');
 
 // Inputs del formulario de estudiantes
 const inputNombreEstudiante = document.getElementById('nombreEstudiante');
@@ -47,6 +50,47 @@ let modoEdicion = false;
 
 function generarId() {
     return Date.now();
+}
+
+//guardar Datos 
+function guardarRutasEnLocalStorage() {
+    try {
+        const rutasParaGuardar = rutas.map(ruta => ({
+            id: ruta.id,
+            nombreRuta: ruta.nombreRuta,
+            conductor: ruta.conductor,
+            hora: ruta.hora,
+            estudiantes: ruta.estudiantes || [] // Por si esta vacio
+        }));
+
+        localStorage.setItem(storageKey, JSON.stringify(rutasParaGuardar));//Establecemos los valores del local storege
+        console.log('Rutas guardadas:', rutasParaGuardar.length); //Para depurar
+    } catch (error) {
+        console.error('Error al guardar:', error);
+    }
+}
+
+//Cargar desde el localStorage
+function cargarRutasDesdeLocalStorage() {
+    try {
+        const rutasGuardadas = localStorage.getItem(storageKey);// Extraemos los datos del local storage
+
+        if (rutasGuardadas) { //Si rutas guardadas exite
+            const rutasParseadas = JSON.parse(rutasGuardadas);
+
+            if (Array.isArray(rutasParseadas)) {// Verificamos que sea tipo array
+                rutas = rutasParseadas;
+                console.log('Rutas cargadas:', rutas.length);
+                return true;
+            }
+        }
+
+        console.log('No hay rutas guardadas');
+        return false;
+    } catch (error) {
+        console.warn('Error al cargar:', error);
+        return false;
+    }
 }
 
 // Funcion de error rutas
@@ -141,28 +185,29 @@ function validacionesEstudiante() {
 
 //Limpiar formularios
 function clear(tipoformulario) {
-    
+
     if (tipoformulario === formularioRuta) {
-        const todosLosInputs = document.querySelectorAll('#formRuta input');
-        todosLosInputs.forEach(input => {
-            if (input.id !== 'editandoId') {
-                input.value = '';
-            }
-            input.classList.remove("error-input")
+        const todosLosInputs = document.querySelectorAll('#formRuta input'); //Obtenenemos todos los inputs 
+        todosLosInputs.forEach(input => { // Limpiamos todo lo que no se este editando
+
+            input.value = '';
+            input.classList.remove("error-input") // Quitamos los erroes de las etiquetas visuales
+
         })
-        inputIdEditando.value = '';
+
         modoEdicion = false;
-        if (btnCancelar) btnCancelar.style.display = 'none';
+        idRutaEditando = null;
+        if (btnCancelar) btnCancelar.style.display = 'none';// Quitamos boton cancelar si existe
         console.log("formulario de rutas limpiado")
     }
 
-    if (tipoformulario === formularioEstudiante) {
+    if (tipoformulario === formularioEstudiante) { //Obtenenemos todos los inputs
         inputNombreEstudiante.value = '';
         selectRuta.value = '';
         inputNombreEstudiante.classList.remove("error-input");
         selectRuta.classList.remove("error-input");
 
-        
+
         const erroresEstudiante = document.querySelectorAll('#formEstudiante .toast-alerta');
         erroresEstudiante.forEach(error => error.remove());
 
@@ -170,12 +215,12 @@ function clear(tipoformulario) {
     }
 }
 
-// Evento para agregar ruta
+// Evento para agregar rutas
 formularioRuta.addEventListener('submit', function (event) {
-    event.preventDefault();
+    event.preventDefault(); //Usamos para que no se recargue autometicamente
 
     if (validacionesRutas() === true) {
-        if (modoEdicion && inputIdEditando.value) {
+        if (modoEdicion) { // Clasificamos por si esta en modo editar
             actualizarRuta();
         } else {
             agregarRuta();
@@ -217,29 +262,33 @@ function agregarRuta() {
     };
 
     rutas.push(datosRuta);
+    guardarRutasEnLocalStorage();
     actualizarSelectRutas();
     renderRutas(rutas);
     actualizarEstadisticas();
 }
 
 function actualizarRuta() {
-    const idEditar = parseInt(inputIdEditando.value);
+
+    //Extraemos los valores
     const nuevoNombre = inputNombreRuta.value;
     const nuevoConductor = inputConductor.value;
     const nuevaHora = inputHoraSalida.value;
 
-    rutas = rutas.map(ruta => {
-        if (ruta.id === idEditar) {
-            return {
-                ...ruta,
+    rutas = rutas.map(ruta => {// Usamos el map para crear un array transformando cada elemento
+        if (ruta.id === idRutaEditando) { //Lo usamos para recorrer el valor
+            
+            return { // Retornamos los nuevos valores
+                ...ruta,// Copia todas las propiedades de la ruta original
                 nombreRuta: nuevoNombre,
-                conductor: nuevoConductor,
+                conductor: nuevoConductor, //Sobrescribelos vlores
                 hora: nuevaHora
             };
         }
-        return ruta;
+        return ruta; // si no entra en la ruta, retornamos la ruta original
     });
 
+    guardarRutasEnLocalStorage();
     actualizarSelectRutas();
     renderRutas(rutas);
     actualizarEstadisticas();
@@ -247,92 +296,103 @@ function actualizarRuta() {
 
 function agregarEstudiante() {
 
+    //Extraemos los valores
     const nombreEstudiante = inputNombreEstudiante.value.trim();
     const rutaId = parseInt(selectRuta.value);
 
-    const rutaIndex = rutas.findIndex(r => r.id === rutaId);
+    const rutaIndex = rutas.findIndex(r => r.id === rutaId); // Recorremos el array y retornamos la posicion donde coincida (si no se encuentra retorna -1)
 
-    if (rutaIndex !== -1) {
-        const nuevoEstudiante = {
+    if (rutaIndex !== -1) { // Validamos que encontro la ruta la ruta 
+        const nuevoEstudiante = { // creamos y guardamos un nuevo estuidante
             id: generarId(),
             nombre: nombreEstudiante
         };
 
-        if (!rutas[rutaIndex].estudiantes) {
+        if (!rutas[rutaIndex].estudiantes) { // Verificamos si ya existe un array de estudiantes y Crea un array vacio si no existe
             rutas[rutaIndex].estudiantes = [];
         }
 
-        rutas[rutaIndex].estudiantes.push(nuevoEstudiante);
+        rutas[rutaIndex].estudiantes.push(nuevoEstudiante); // Agregamos estudiantes en la lista
 
+        guardarRutasEnLocalStorage();
         renderRutas(rutas);
         actualizarEstadisticas();
 
         console.log("Estudiante agregado correctamente");
+
     } else {
         // Error si no se encuentra la ruta
         mostrarErrorEstudiantes(selectRuta, contenedorSelectRuta, "No se encontró la ruta seleccionada");
     }
 }
 
+//Atualizar el select en el apartado de estudiantes
 function actualizarSelectRutas() {
-    if (!selectRuta) return;
+    if (!selectRuta) return;// Verificamos que exista por si las dudas
 
-    selectRuta.innerHTML = '<option value="">Seleccione una ruta</option>';
+    selectRuta.innerHTML = '<option value="">Seleccione una ruta</option>';//Agregar una opcion por defecto
 
-    rutas.forEach(ruta => {
-        const option = document.createElement('option');
-        option.value = ruta.id;
-        option.textContent = `${ruta.nombreRuta} - ${ruta.conductor}`;
-        selectRuta.appendChild(option);
+    rutas.forEach(ruta => { // Recorre el array y ejecuta codigo por cada ruta
+
+        const option = document.createElement('option'); //Creamos un elemento HTML para agregar las rutas 
+
+        option.value = ruta.id; // Le agregamos un value a la opcion
+        option.textContent = `${ruta.nombreRuta} - ${ruta.conductor}`;// creamos los 
+        selectRuta.appendChild(option); //Agregamos la opcion
     });
 }
 
-function actualizarEstadisticas() {
-    if (spanTotalRutas) spanTotalRutas.textContent = rutas.length;
+function actualizarEstadisticas() {//Llamaremos Esta funcion cada que el usuario realice cambion en las rutas o estudiantes
+
+    if (spanTotalRutas) spanTotalRutas.textContent = rutas.length;// Leemos la cantidad de rutas que existen
 
     let totalEstudiantes = 0;
     rutas.forEach(ruta => {
-        totalEstudiantes += ruta.estudiantes ? ruta.estudiantes.length : 0;
+        totalEstudiantes += ruta.estudiantes ? ruta.estudiantes.length : 0;// recorre cada ruta y le regresa la cantidad de estudiantes y si no tiene retorna 0
     });
 
     if (spanTotalEstudiantes) spanTotalEstudiantes.textContent = totalEstudiantes;
 
-    const promedio = rutas.length > 0 ? (totalEstudiantes / rutas.length).toFixed(1) : 0;
+    const promedio = rutas.length > 0 ? (totalEstudiantes / rutas.length).toFixed(1) : 0; // Calculamos y redondeamos con el toFixed(1) a 1 decimal
     if (spanPromedioRuta) spanPromedioRuta.textContent = promedio;
 }
 
-function renderRutas(dato_ruta) {
-    if (!contenedorRutas) {
+function renderRutas(dato_ruta) { //Les pasamos las listas actualizadas para mostrarlas
+
+    if (!contenedorRutas) { // Verificamos que exista
         console.error("Contenedor de rutas no encontrado");
         return;
     }
 
-    if (dato_ruta.length === 0) {
+    if (dato_ruta.length === 0) {// Verificamos que no este vacio
         contenedorRutas.innerHTML = '<div class="mensaje-vacio">No hay rutas.</div>';
         return;
     }
 
-    contenedorRutas.innerHTML = "";
+    contenedorRutas.innerHTML = "";// Vaciamos el contenedor 
 
-    dato_ruta.forEach((element, index) => {
+    dato_ruta.forEach((element) => { // recorremos la lista con element = "Es la ruta actual" y index = "la posicion numerica"
         const tarjeta = document.createElement("div-tarjeta");
 
+        //Le agregamos atributos
         tarjeta.setAttribute("nombreRuta", element.nombreRuta);
         tarjeta.setAttribute("conductor", element.conductor);
         tarjeta.setAttribute("hora", element.hora);
         tarjeta.setAttribute("data-id", element.id);
-        tarjeta.setAttribute("data-index", index);
+        
 
-        if (element.estudiantes && element.estudiantes.length > 0) {
-            tarjeta.setAttribute("estudiantes", JSON.stringify(element.estudiantes));
+        //
+        if (element.estudiantes && element.estudiantes.length > 0) { // si existe estudiantes y no esta vacio
+            tarjeta.setAttribute("estudiantes", JSON.stringify(element.estudiantes)); //Agregamos estudiantes de la lista
         }
 
-        tarjeta.addEventListener("editar-tarjeta", (e) => {
-            abrirModalEdicion(e.detail);
+        tarjeta.addEventListener("editar-tarjeta", (e) => {// El oyente que recibe todos los datos pasados en el setup De los eventos de las tarjetas
+            abrirModalEdicion(e.detail);//La "e" es quien recibel los parametros del evento como un json
         });
 
-        tarjeta.addEventListener("eliminar-tarjeta", (e) => {
-            rutas = rutas.filter(r => r.id != e.detail.id);
+        tarjeta.addEventListener("eliminar-tarjeta", (e) => {//Tambien es el oyente que recibe todos los datos pasados en el setup De los eventos de las tarjetas
+            rutas = rutas.filter(r => r.id != e.detail.id); // cargamos todas las rutas menos la que tiene 
+            guardarRutasEnLocalStorage();
             actualizarSelectRutas();
             renderRutas(rutas);
             actualizarEstadisticas();
@@ -343,6 +403,7 @@ function renderRutas(dato_ruta) {
             const rutaIndex = rutas.findIndex(r => r.id === rutaId);
             if (rutaIndex !== -1) {
                 rutas[rutaIndex].estudiantes = e.detail.estudiantes;
+                guardarRutasEnLocalStorage();
                 actualizarEstadisticas();
             }
         });
@@ -351,23 +412,26 @@ function renderRutas(dato_ruta) {
     });
 }
 
-function abrirModalEdicion(datosRuta ) { // Este es un objeto que proviene del shadow DOM
-    if (!datosRuta || !datosRuta.id) {
+function abrirModalEdicion(datosRuta) { // Este es un objeto que proviene del shadow DOM
+    
+    if (!datosRuta || !datosRuta.id) {// Validamos q existan y que tengan id
         console.error("No se recibieron datos validos para editar");
         return;
     }
 
+    //Mostramos en el modal
     document.getElementById('modalEditandoId').value = datosRuta.id;
     document.getElementById('modalNombreRuta').value = datosRuta.nombreRuta;
     document.getElementById('modalConductor').value = datosRuta.conductor;
     document.getElementById('modalHoraSalida').value = datosRuta.hora;
 
-    idRutaEditando = datosRuta.id;
+    idRutaEditando = datosRuta.id;//Actualizamos la variable global
 
-    modal.style.display = 'flex';
+    modal.style.display = 'flex';// Mostramos el modal
 }
 
-function cerrarModal() {
+function cerrarModal() { // Limpuamos el modal para cuando se vuelva a abrir no tenga problemas
+
     modal.style.display = 'none';
 
     document.getElementById('modalNombreRuta').value = '';
@@ -377,11 +441,14 @@ function cerrarModal() {
     idRutaEditando = null;
 }
 
-function guardarCambiosRuta() {
+function guardarCambiosRuta() {//
+
+    //Leemos los valores que pasa en el modal+
     const nuevoNombre = document.getElementById('modalNombreRuta').value.trim();
     const nuevoConductor = document.getElementById('modalConductor').value.trim();
     const nuevaHora = document.getElementById('modalHoraSalida').value;
 
+    //Validamos
     if (!nuevoNombre) {
         alert('El nombre de la ruta es obligatorio');
         return;
@@ -417,21 +484,19 @@ function guardarCambiosRuta() {
         return ruta;
     });
 
+    guardarRutasEnLocalStorage();
     actualizarSelectRutas();
     renderRutas(rutas);
     actualizarEstadisticas();
     cerrarModal();
 }
 
+//Agregamos funcionalidad a los botones
 if (modalClose) modalClose.addEventListener('click', cerrarModal);
 if (modalCancelarBtn) modalCancelarBtn.addEventListener('click', cerrarModal);
 if (modalGuardarBtn) modalGuardarBtn.addEventListener('click', guardarCambiosRuta);
 
-window.addEventListener('click', (event) => {
-    if (event.target === modal) {
-        cerrarModal();
-    }
-});
+
 
 // Template del Web Component
 const template = document.createElement("template");
@@ -577,14 +642,14 @@ class tarjeta extends HTMLElement {
     }
 
     connectedCallback() {
-        
+
         const nombreRuta = this.getAttribute("nombreRuta");
         const conductor = this.getAttribute("conductor");
         const hora = this.getAttribute("hora");
 
-        this.nombreElement.textContent = nombreRuta 
-        this.conductorElement.textContent = conductor 
-        this.horaElement.textContent = hora 
+        this.nombreElement.textContent = nombreRuta
+        this.conductorElement.textContent = conductor
+        this.horaElement.textContent = hora
 
         const estudiantesAttr = this.getAttribute("estudiantes");
         if (estudiantesAttr) {
@@ -611,6 +676,7 @@ class tarjeta extends HTMLElement {
         }
 
         this.estudiantes.forEach(estudiante => {
+
             const estudianteDiv = document.createElement('div');
             estudianteDiv.className = 'estudiante';
             estudianteDiv.innerHTML = `
@@ -642,11 +708,12 @@ class tarjeta extends HTMLElement {
         }));
     }
 
-    setupEventListeners() {
-        
+    setupEventListeners() {// Configuramos los eventos que tiene en las  rutas
+
         this.editarBtn.addEventListener("click", () => {
-            this.dispatchEvent(new CustomEvent("editar-tarjeta", {
-                detail: {
+            this.dispatchEvent(new CustomEvent("editar-tarjeta", {// Disparador que manda una señal al aire que luego lo captara un Listerner que obtendra los datos enviados
+
+                detail: {//Datos que recibira el Listerner
                     id: parseInt(this.getAttribute("data-id")),
                     nombreRuta: this.nombreElement.textContent,
                     conductor: this.conductorElement.textContent,
@@ -676,27 +743,28 @@ class tarjeta extends HTMLElement {
 
 customElements.define("div-tarjeta", tarjeta);
 
-// Inicializar estadisticas
-actualizarEstadisticas();
+
+
+
+
 
 // API DEL CLIMA 
 
-
 async function cargarClima() {
     const contenedorClima = document.getElementById('clima');
-    
-    if (!contenedorClima) {
+
+    if (!contenedorClima) {// Por si x o y motivo no esta el contenedor
         console.error('Contenedor de clima no encontrado');
         return;
     }
-    
+
     try {
-       
-        contenedorClima.innerHTML = '<span class="clima-cargando"> Cargando clima...</span>';
-        
-        
+
+        contenedorClima.innerHTML = '<span class="clima-cargando"> Cargando clima...</span>';//Para darle dinamismo (Mientras hace la consulta)
+
+
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
+            navigator.geolocation.getCurrentPosition(// Permite acceder a la ubicacion del dispositivo
                 async (position) => {
                     // Si el usuario permite ubicación, usar coordenadas
                     const lat = position.coords.latitude;
@@ -704,72 +772,73 @@ async function cargarClima() {
                     await obtenerClimaPorCoordenadas(lat, lon);
                 },
                 async () => {
-                    // Si no permite ubicación, usar ciudad por defecto
-                    await obtenerClimaPorCiudad(CIUDAD_POR_DEFECTO);
+                    // Por si el dispositivo no permite la ubicacion
+                    await obtenerClimaPorCiudad(ciudadPorDeficto);
                 }
             );
         } else {
-            // Si el navegador no soporta geolocalización, usar ciudad por defecto
-            await obtenerClimaPorCiudad(CIUDAD_POR_DEFECTO);
+            //Puede que el navegador pueda cargar la ubicacion
+            await obtenerClimaPorCiudad(ciudadPorDeficto);
         }
-        
+
     } catch (error) {
+        //Por si falla
         console.warn('Error al cargar el clima:', error);
         contenedorClima.innerHTML = '<span class="clima-cargando"> Error al cargar el clima</span>'
     }
 }
 
-async function obtenerClimaPorCiudad(ciudad) {
+async function obtenerClimaPorCiudad(ciudad) {//Alternativa por si no funciona el de coordenadas
     const contenedorClima = document.getElementById('clima');
-    
-    
+
+
     try {
         const respuesta = await fetch(
-            `https://api.weatherapi.com/v1/current.json?key=${ApiKey}&q=${ciudad}&lang=es`
+            `https://api.weatherapi.com/v1/current.json?key=${ApiKey}&q=${ciudad}&lang=es`//Hacemos una peticion con coordenadas
         );
-        
-        if (!respuesta.ok) {
-            throw new Error(`Error ${respuesta.status}: No se pudo obtener el clima`);
+
+        if (!respuesta.ok) {// Un error si no responde para depurar
+            throw new Error(`Error ${respuesta.status}: No se pudo obtener el clima`);// Si esto se cumple con el throw lo mandamos directamente al catch
         }
-        
+
         const datos = await respuesta.json();
         actualizarInterfazClima(datos);
-        
+
     } catch (error) {
         console.warn('Error obteniendo clima por ciudad:', error);
-        contenedorClima.innerHTML = '<span class="clima-cargando"> Error al cargar el clima</span>'
+        contenedorClima.innerHTML = '<span class="clima-cargando"> Error al cargar el clima</span>'//Modificamos el contenedor del clima para depurar
     }
 }
 
 async function obtenerClimaPorCoordenadas(lat, lon) {
-    
+
     const contenedorClima = document.getElementById('clima');
-    
-    
+
+
     try {
         const respuesta = await fetch(
-            `https://api.weatherapi.com/v1/current.json?key=${ApiKey}&q=${lat},${lon}&lang=es`
+            `https://api.weatherapi.com/v1/current.json?key=${ApiKey}&q=${lat},${lon}&lang=es`//Hacemos una peticion con coordenadas
         );
-        
-        if (!respuesta.ok) {
+
+        if (!respuesta.ok) {// Un error si no responde para depurar
             throw new Error(`Error ${respuesta.status}: No se pudo obtener el clima`);
         }
-        
-        const datos = await respuesta.json();
-        actualizarInterfazClima(datos);
-        
+
+        const datos = await respuesta.json();//Pasamos la peticion a una variable con formato Json
+        actualizarInterfazClima(datos);// Si esto se cumple con el throw lo mandamos directamente al catch
+
     } catch (error) {
         console.error('Error obteniendo clima por coordenadas:', error);
-        await obtenerClimaPorCiudad(CIUDAD_POR_DEFECTO);
+        await obtenerClimaPorCiudad(ciudadPorDeficto);
     }
 }
 
 function actualizarInterfazClima(datos) {
-    
+
     const contenedorClima = document.getElementById('clima');
-    
-    
-    // Extraer datos
+
+
+    // Extraemos los datos del clima por medio del Json
     const temperatura = Math.round(datos.current.temp_c);
     const sensacionTermica = Math.round(datos.current.feelslike_c);
     const descripcion = datos.current.condition.text;
@@ -780,8 +849,8 @@ function actualizarInterfazClima(datos) {
     const iconoUrl = `https:${datos.current.condition.icon}`;
     const horaLocal = datos.location.localtime;
     const esDeNoche = datos.current.is_day === 0;
-    
-    
+
+    //Creamos lo que se va a poner en el HTML
     contenedorClima.innerHTML = `
         <div class="clima-contenedor">
             <div class="clima-principal">
@@ -802,27 +871,33 @@ function actualizarInterfazClima(datos) {
             </div>
         </div>
     `;
-    
-    
+
+
     if (esDeNoche) {
         contenedorClima.classList.add('clima-nocturno');
     } else {
         contenedorClima.classList.remove('clima-nocturno');
     }
-    
+
     console.log(`Clima actualizado: ${ciudad} - ${temperatura}°C - ${descripcion}`);
 }
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Pequeño delay para asegurar que el DOM está listo
+    // Delay para darele dinamismo a la pagina
     setTimeout(() => {
         cargarClima();
     }, 2000);
-    
-    // Actualizar clima 
+
+    // Atualizamos el clima
     setInterval(() => {
         cargarClima();
         console.log('Actualizando clima automáticamente...');
     }, 900000);
 });
+
+//Renderizar todo apenas se ejecute la pagina
+cargarRutasDesdeLocalStorage();
+actualizarSelectRutas();
+renderRutas(rutas);
+actualizarEstadisticas();

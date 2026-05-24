@@ -51,5 +51,22 @@
     "diff_rad": 211.03,
     "dni": 0.0,
     "gti": 210.71
-  }
+  },
+  
+  
+  "e": {
+    "type": "editar-tarjeta",
+    "detail": {
+        "id": 123,
+        "nombreRuta": "Ruta Norte",
+        "conductor": "Juan Perez",
+        "hora": "07:00",
+        "estudiantes": []
+    },
+    "target": "tarjeta",
+    "currentTarget": "tarjeta",
+    "bubbles": true,
+    "composed": true
+}
+
 }
