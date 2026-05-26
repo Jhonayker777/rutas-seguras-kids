@@ -5,7 +5,7 @@ let rutas = [];
 const storageKey = 'rutas_seguras_kids';
 
 //API
-const ApiKey = '5181b53cb00c4ea7859183859262305';
+const ApiKey = '2365507e00d54a3ca28170127262505';
 const ciudadPorDeficto = 'Bucaramanga';
 
 // Formularios
@@ -795,7 +795,7 @@ async function obtenerClimaPorCiudad(ciudad) {//Alternativa por si no funciona e
 
     try {
         const respuesta = await fetch(
-            `https://api.weatherapi.com/v1/current.json?key=${ApiKey}&q=${ciudad}&lang=es`//Hacemos una peticion con coordenadas
+            `https://api.weatherapi.com/v1/current.json?key=${ApiKey}&q=${ciudad}&lang=es`//Hacemos una peticion con ciudad
         );
 
         if (!respuesta.ok) {// Un error si no responde para depurar
