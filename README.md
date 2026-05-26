@@ -191,23 +191,23 @@ Utilizando Media Queries.
 
 ### Página Principal
 
-![alt text](image.png)
+![alt text](/img/image.png)
 
 ### Rutas agregadas
 
-![alt text](image-1.png)
+![alt text](/img/image-1.png)
 
 ### Estudiantes agregados
 
-![alt text](image-2.png)
+![alt text](/img/image-2.png)
 
 ### Clima cargado
 
-![alt text](image-3.png)
+![alt text](/img/image-3.png)
 
 ### Vista Responsive
 
-![alt text](image-4.png)
+![alt text](/img/image-4.png)
 
 ---
 
