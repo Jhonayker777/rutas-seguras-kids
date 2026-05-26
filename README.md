@@ -191,23 +191,23 @@ Utilizando Media Queries.
 
 ### Página Principal
 
-...
+![alt text](image.png)
 
-### Gestión de Rutas
+### Rutas agregadas
 
-...
+![alt text](image-1.png)
 
-### Gestión de Estudiantes
+### Estudiantes agregados
 
-...
+![alt text](image-2.png)
 
-### Información Climática
+### Clima cargado
 
-...
+![alt text](image-3.png)
 
 ### Vista Responsive
 
-...
+![alt text](image-4.png)
 
 ---
 
