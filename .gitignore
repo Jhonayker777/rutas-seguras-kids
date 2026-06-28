@@ -1,0 +1,58 @@
+# ===============================
+# Python
+# ===============================
+
+# Archivos compilados
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*$py.class
+
+# Archivos de distribuciÃ³n
+build/
+dist/
+*.egg-info/
+
+# Logs
+*.log
+
+# Base de datos SQLite
+*.sqlite3
+
+# ===============================
+# Entornos virtuales
+# ===============================
+
+venv/
+env/
+ENV/
+.venv/
+
+# ===============================
+# Variables de entorno
+# ===============================
+
+.env
+.env.*
+
+# ===============================
+# Testing / coverage
+# ===============================
+
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ===============================
+# Visual Studio Code
+# ===============================
+
+.vscode/
+
+# ===============================
+# Sistema operativo
+# ===============================
+
+.DS_Store
+Thumbs.db
