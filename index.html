@@ -77,7 +77,18 @@
 
     <!-- ========== LISTA DE RUTAS ========== -->
     <div class="seccion-rutas">
-      <h2>🚍 Mis Rutas</h2>
+      <div class="campo">
+        <h2>🚍 Mis Rutas</h2>
+        <label>Seleccionar ruta a filtrar</label>
+
+        <select id="rutasFiltro">
+          <opcion value="Todos"> Todos</opcion>
+          <opcion value="Ruta Norte"> Ruta Norte</opcion>
+          <opcion value="Ruta Sur"> Ruta Sur</opcion>
+          <opcion value="Ruta Centro"> Ruta Centro</opcion>
+        </select>
+
+      </div>
 
       <div id="contenedorRutas" class="lista-rutas">
         <div class="mensaje-vacio"> No hay rutas.</div>

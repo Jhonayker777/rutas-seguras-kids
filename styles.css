@@ -255,6 +255,8 @@ button {
     border-top: 6px solid #e74c3c;
 }
 
+
+
 /* Clase para mostrar la alerta (con animación) */
 .toast-alerta.mostrar {
     opacity: 1;
