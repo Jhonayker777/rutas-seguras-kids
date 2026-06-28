@@ -75,24 +75,24 @@
       </div>
     </div>
 
-    <!-- ========== LISTA DE RUTAS ========== -->
+    <!-- LISTA DE RUTAS -->
     <div class="seccion-rutas">
-      <div class="campo">
-        <h2>🚍 Mis Rutas</h2>
-        <label>Seleccionar ruta a filtrar</label>
+      <h2>🚍 Mis Rutas</h2>
 
-        <select id="rutasFiltro">
-          <opcion value="Todos"> Todos</opcion>
-          <opcion value="Ruta Norte"> Ruta Norte</opcion>
-          <opcion value="Ruta Sur"> Ruta Sur</opcion>
-          <opcion value="Ruta Centro"> Ruta Centro</opcion>
-        </select>
-
+      <!-- FILTRO -->
+      <div class="filtro-container">
+        <div class="filtro-busqueda">
+          <span class="filtro-icono">🔍</span>
+          <input type="text" id="RutasFiltroInput" placeholder="Buscar por nombre, conductor o estudiante...">
+          <button id="limpiarFiltro" class="btn-limpiar-filtro" style="display: none;">✕</button>
+        </div>
+        <div class="filtro-resultados">
+          <span id="resultadosFiltro">Mostrando 0 de 0 rutas</span>
+        </div>
       </div>
 
       <div id="contenedorRutas" class="lista-rutas">
-        <div class="mensaje-vacio"> No hay rutas.</div>
-
+        <div class="mensaje-vacio">✨ No hay rutas. ¡Crea una!</div>
       </div>
     </div>
 

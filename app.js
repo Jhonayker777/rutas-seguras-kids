@@ -1,4 +1,3 @@
-
 let rutas = [];
 
 //LocalStorage
@@ -45,11 +44,15 @@ const modalClose = document.querySelector('.modal-close');
 const modalCancelarBtn = document.getElementById('modalCancelarBtn');
 const modalGuardarBtn = document.getElementById('modalGuardarBtn');
 
-//Filtro
-const selectFiltro = document.getElementById('RutasFiltro');
+// Elementos del filtro
+const inputFiltro = document.getElementById('RutasFiltroInput');
+const btnLimpiarFiltro = document.getElementById('limpiarFiltro');
+const resultadosFiltro = document.getElementById('resultadosFiltro');
 
 let idRutaEditando = null;
 let modoEdicion = false;
+let textoFiltro = '';
+let rutasFiltradas = [];
 
 function generarId() {
     return Date.now();
@@ -63,11 +66,11 @@ function guardarRutasEnLocalStorage() {
             nombreRuta: ruta.nombreRuta,
             conductor: ruta.conductor,
             hora: ruta.hora,
-            estudiantes: ruta.estudiantes || [] // Por si esta vacio
+            estudiantes: ruta.estudiantes || []
         }));
 
-        localStorage.setItem(storageKey, JSON.stringify(rutasParaGuardar));//Establecemos los valores del local storege
-        console.log('Rutas guardadas:', rutasParaGuardar.length); //Para depurar
+        localStorage.setItem(storageKey, JSON.stringify(rutasParaGuardar));
+        console.log('Rutas guardadas:', rutasParaGuardar.length);
     } catch (error) {
         console.error('Error al guardar:', error);
     }
@@ -76,12 +79,12 @@ function guardarRutasEnLocalStorage() {
 //Cargar desde el localStorage
 function cargarRutasDesdeLocalStorage() {
     try {
-        const rutasGuardadas = localStorage.getItem(storageKey);// Extraemos los datos del local storage
+        const rutasGuardadas = localStorage.getItem(storageKey);
 
-        if (rutasGuardadas) { //Si rutas guardadas exite
+        if (rutasGuardadas) {
             const rutasParseadas = JSON.parse(rutasGuardadas);
 
-            if (Array.isArray(rutasParseadas)) {// Verificamos que sea tipo array
+            if (Array.isArray(rutasParseadas)) {
                 rutas = rutasParseadas;
                 console.log('Rutas cargadas:', rutas.length);
                 return true;
@@ -190,21 +193,21 @@ function validacionesEstudiante() {
 function clear(tipoformulario) {
 
     if (tipoformulario === formularioRuta) {
-        const todosLosInputs = document.querySelectorAll('#formRuta input'); //Obtenenemos todos los inputs 
-        todosLosInputs.forEach(input => { // Limpiamos todo lo que no se este editando
+        const todosLosInputs = document.querySelectorAll('#formRuta input');
+        todosLosInputs.forEach(input => {
 
             input.value = '';
-            input.classList.remove("error-input") // Quitamos los erroes de las etiquetas visuales
+            input.classList.remove("error-input")
 
         })
 
         modoEdicion = false;
         idRutaEditando = null;
-        if (btnCancelar) btnCancelar.style.display = 'none';// Quitamos boton cancelar si existe
+        if (btnCancelar) btnCancelar.style.display = 'none';
         console.log("formulario de rutas limpiado")
     }
 
-    if (tipoformulario === formularioEstudiante) { //Obtenenemos todos los inputs
+    if (tipoformulario === formularioEstudiante) {
         inputNombreEstudiante.value = '';
         selectRuta.value = '';
         inputNombreEstudiante.classList.remove("error-input");
@@ -220,10 +223,10 @@ function clear(tipoformulario) {
 
 // Evento para agregar rutas
 formularioRuta.addEventListener('submit', function (event) {
-    event.preventDefault(); //Usamos para que no se recargue autometicamente
+    event.preventDefault();
 
     if (validacionesRutas() === true) {
-        if (modoEdicion) { // Clasificamos por si esta en modo editar
+        if (modoEdicion) {
             actualizarRuta();
         } else {
             agregarRuta();
@@ -267,8 +270,12 @@ function agregarRuta() {
     rutas.push(datosRuta);
     guardarRutasEnLocalStorage();
     actualizarSelectRutas();
-    filtrarRutas();
-    renderRutas(rutas);
+    // Re-aplicar filtro después de agregar
+    if (inputFiltro) {
+        filtrarRutas();
+    } else {
+        renderRutas(rutas);
+    }
     actualizarEstadisticas();
 }
 
@@ -279,40 +286,168 @@ function actualizarRuta() {
     const nuevoConductor = inputConductor.value;
     const nuevaHora = inputHoraSalida.value;
 
-    rutas = rutas.map(ruta => {// Usamos el map para crear un array transformando cada elemento
-        if (ruta.id === idRutaEditando) { //Lo usamos para recorrer el valor
+    rutas = rutas.map(ruta => {
+        if (ruta.id === idRutaEditando) {
 
-            return { // Retornamos los nuevos valores
-                ...ruta,// Copia todas las propiedades de la ruta original
+            return {
+                ...ruta,
                 nombreRuta: nuevoNombre,
-                conductor: nuevoConductor, //Sobrescribelos vlores
+                conductor: nuevoConductor,
                 hora: nuevaHora
             };
         }
-        return ruta; // si no entra en la ruta, retornamos la ruta original
+        return ruta;
     });
 
     guardarRutasEnLocalStorage();
     actualizarSelectRutas();
-    renderRutas(rutas);
+    // Re-aplicar filtro después de editar
+    if (inputFiltro) {
+        filtrarRutas();
+    } else {
+        renderRutas(rutas);
+    }
     actualizarEstadisticas();
 }
 
+// ========== FILTRO DE RUTAS ==========
 function filtrarRutas() {
-    if (!selectFiltro) return;// Verificamos que exista por si las dudas
+    if (!inputFiltro) return;
+    
+    textoFiltro = inputFiltro.value.toLowerCase().trim();
+    
+    if (textoFiltro === '') {
+        // Si no hay texto, mostrar todas
+        rutasFiltradas = [...rutas];
+        if (btnLimpiarFiltro) btnLimpiarFiltro.style.display = 'none';
+    } else {
+        // Filtrar por nombre, conductor o estudiante
+        rutasFiltradas = rutas.filter(ruta => {
+            // Buscar en nombre de la ruta
+            if (ruta.nombreRuta.toLowerCase().includes(textoFiltro)) return true;
+            
+            // Buscar en nombre del conductor
+            if (ruta.conductor.toLowerCase().includes(textoFiltro)) return true;
+            
+            // Buscar en nombres de estudiantes
+            if (ruta.estudiantes && ruta.estudiantes.length > 0) {
+                for (let estudiante of ruta.estudiantes) {
+                    if (estudiante.nombre.toLowerCase().includes(textoFiltro)) {
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
+        });
+        
+        if (btnLimpiarFiltro) btnLimpiarFiltro.style.display = 'flex';
+    }
+    
+    // Actualizar contador de resultados
+    if (resultadosFiltro) {
+        resultadosFiltro.textContent = `Mostrando ${rutasFiltradas.length} de ${rutas.length} rutas`;
+    }
+    
+    // Renderizar las rutas filtradas
+    renderRutasFiltradas();
+}
 
-    selectFiltro.innerHTML = '<option value="">Seleccione una ruta</option>';//Agregar una opcion por defecto
-
-    rutas.forEach(ruta => { // Recorre el array y ejecuta codigo por cada ruta
-
-        const option = document.createElement('option'); //Creamos un elemento HTML para agregar las rutas 
-
-        option.value = ruta.nombreRuta; // Le agregamos un value a la opcion
-        option.textContent = `${ruta.nombreRuta} - ${ruta.conductor}`;// creamos los 
-        selectFiltro.appendChild(option); //Agregamos la opcion
+// Renderizar solo las rutas filtradas
+function renderRutasFiltradas() {
+    if (!contenedorRutas) return;
+    
+    if (rutasFiltradas.length === 0) {
+        if (textoFiltro) {
+            contenedorRutas.innerHTML = `
+                <div class="sin-resultados">
+                    <span class="icono">🔍</span>
+                    <div class="mensaje">No se encontraron rutas para "<strong>${textoFiltro}</strong>"</div>
+                    <div class="submensaje">Intenta con otra palabra o limpia la búsqueda</div>
+                </div>
+            `;
+        } else {
+            contenedorRutas.innerHTML = '<div class="mensaje-vacio">No hay rutas.</div>';
+        }
+        return;
+    }
+    
+    contenedorRutas.innerHTML = "";
+    
+    rutasFiltradas.forEach((element) => {
+        const tarjeta = document.createElement("div-tarjeta");
+        
+        tarjeta.setAttribute("nombreRuta", element.nombreRuta);
+        tarjeta.setAttribute("conductor", element.conductor);
+        tarjeta.setAttribute("hora", element.hora);
+        tarjeta.setAttribute("data-id", element.id);
+        
+        if (element.estudiantes && element.estudiantes.length > 0) {
+            tarjeta.setAttribute("estudiantes", JSON.stringify(element.estudiantes));
+        }
+        
+        tarjeta.addEventListener("editar-tarjeta", (e) => {
+            abrirModalEdicion(e.detail);
+        });
+        
+        tarjeta.addEventListener("eliminar-tarjeta", (e) => {
+            rutas = rutas.filter(r => r.id != e.detail.id);
+            guardarRutasEnLocalStorage();
+            actualizarSelectRutas();
+            // Re-aplicar filtro después de eliminar
+            if (inputFiltro) {
+                filtrarRutas();
+            } else {
+                renderRutas(rutas);
+            }
+            actualizarEstadisticas();
+        });
+        
+        tarjeta.addEventListener("estudiante-removido", (e) => {
+            const rutaId = parseInt(e.detail.rutaId);
+            const rutaIndex = rutas.findIndex(r => r.id === rutaId);
+            if (rutaIndex !== -1) {
+                rutas[rutaIndex].estudiantes = e.detail.estudiantes;
+                guardarRutasEnLocalStorage();
+                actualizarEstadisticas();
+                // Re-aplicar filtro después de eliminar estudiante
+                if (inputFiltro) {
+                    filtrarRutas();
+                } else {
+                    renderRutas(rutas);
+                }
+            }
+        });
+        
+        contenedorRutas.appendChild(tarjeta);
     });
 }
 
+// Configurar eventos del filtro
+function configurarFiltro() {
+    if (!inputFiltro) return;
+    
+    // Filtrar en tiempo real mientras escribe
+    inputFiltro.addEventListener('input', filtrarRutas);
+    
+    // Limpiar filtro con el botón
+    if (btnLimpiarFiltro) {
+        btnLimpiarFiltro.addEventListener('click', () => {
+            inputFiltro.value = '';
+            filtrarRutas();
+            inputFiltro.focus();
+        });
+    }
+    
+    // Limpiar con tecla Escape
+    inputFiltro.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            inputFiltro.value = '';
+            filtrarRutas();
+            inputFiltro.blur();
+        }
+    });
+}
 
 function agregarEstudiante() {
 
@@ -320,22 +455,27 @@ function agregarEstudiante() {
     const nombreEstudiante = inputNombreEstudiante.value.trim();
     const rutaId = parseInt(selectRuta.value);
 
-    const rutaIndex = rutas.findIndex(r => r.id === rutaId); // Recorremos el array y retornamos la posicion donde coincida (si no se encuentra retorna -1)
+    const rutaIndex = rutas.findIndex(r => r.id === rutaId);
 
-    if (rutaIndex !== -1) { // Validamos que encontro la ruta la ruta 
-        const nuevoEstudiante = { // creamos y guardamos un nuevo estuidante
+    if (rutaIndex !== -1) {
+        const nuevoEstudiante = {
             id: generarId(),
             nombre: nombreEstudiante
         };
 
-        if (!rutas[rutaIndex].estudiantes) { // Verificamos si ya existe un array de estudiantes y Crea un array vacio si no existe
+        if (!rutas[rutaIndex].estudiantes) {
             rutas[rutaIndex].estudiantes = [];
         }
 
-        rutas[rutaIndex].estudiantes.push(nuevoEstudiante); // Agregamos estudiantes en la lista
+        rutas[rutaIndex].estudiantes.push(nuevoEstudiante);
 
         guardarRutasEnLocalStorage();
-        renderRutas(rutas);
+        // Re-aplicar filtro después de agregar estudiante
+        if (inputFiltro) {
+            filtrarRutas();
+        } else {
+            renderRutas(rutas);
+        }
         actualizarEstadisticas();
 
         console.log("Estudiante agregado correctamente");
@@ -346,290 +486,76 @@ function agregarEstudiante() {
     }
 }
 
-//Atualizar el select en el apartado de estudiantes
+//Actualizar el select en el apartado de estudiantes
 function actualizarSelectRutas() {
-    if (!selectRuta) return;// Verificamos que exista por si las dudas
+    if (!selectRuta) return;
 
-    selectRuta.innerHTML = '<option value="">Seleccione una ruta</option>';//Agregar una opcion por defecto
+    selectRuta.innerHTML = '<option value="">Seleccione una ruta</option>';
 
-    rutas.forEach(ruta => { // Recorre el array y ejecuta codigo por cada ruta
+    rutas.forEach(ruta => {
 
-        const option = document.createElement('option'); //Creamos un elemento HTML para agregar las rutas 
+        const option = document.createElement('option');
 
-        option.value = ruta.id; // Le agregamos un value a la opcion
-        option.textContent = `${ruta.nombreRuta} - ${ruta.conductor}`;// creamos los 
-        selectRuta.appendChild(option); //Agregamos la opcion
+        option.value = ruta.id;
+        option.textContent = `${ruta.nombreRuta} - ${ruta.conductor}`;
+        selectRuta.appendChild(option);
     });
 }
 
-function actualizarEstadisticas() {//Llamaremos Esta funcion cada que el usuario realice cambion en las rutas o estudiantes
+function actualizarEstadisticas() {
 
-    if (spanTotalRutas) spanTotalRutas.textContent = rutas.length;// Leemos la cantidad de rutas que existen
+    if (spanTotalRutas) spanTotalRutas.textContent = rutas.length;
 
     let totalEstudiantes = 0;
     rutas.forEach(ruta => {
-        totalEstudiantes += ruta.estudiantes ? ruta.estudiantes.length : 0;// recorre cada ruta y le regresa la cantidad de estudiantes y si no tiene retorna 0
+        totalEstudiantes += ruta.estudiantes ? ruta.estudiantes.length : 0;
     });
 
     if (spanTotalEstudiantes) spanTotalEstudiantes.textContent = totalEstudiantes;
 
-    const promedio = rutas.length > 0 ? (totalEstudiantes / rutas.length).toFixed(1) : 0; // Calculamos y redondeamos con el toFixed(1) a 1 decimal
+    const promedio = rutas.length > 0 ? (totalEstudiantes / rutas.length).toFixed(1) : 0;
     if (spanPromedioRuta) spanPromedioRuta.textContent = promedio;
 }
 
-function renderRutas(dato_ruta) { //Les pasamos las listas actualizadas para mostrarlas
+function renderRutas(dato_ruta) {
 
-    if (!contenedorRutas) { // Verificamos que exista
-        console.error("Contenedor de rutas no encontrado");
-        return;
+    // Actualizar el array global si se pasó uno nuevo
+    if (dato_ruta) {
+        rutas = dato_ruta;
     }
-
-    if (dato_ruta.length === 0) {// Verificamos que no este vacio
-        contenedorRutas.innerHTML = '<div class="mensaje-vacio">No hay rutas.</div>';
-        return;
+    
+    // Resetear filtro
+    if (inputFiltro) {
+        inputFiltro.value = '';
+        if (btnLimpiarFiltro) btnLimpiarFiltro.style.display = 'none';
+        if (resultadosFiltro) {
+            resultadosFiltro.textContent = `Mostrando ${rutas.length} de ${rutas.length} rutas`;
+        }
     }
-
-    contenedorRutas.innerHTML = "";// Vaciamos el contenedor 
-    if (selectFiltro.value === "todos") {
-        dato_ruta.forEach((element) => { // recorremos la lista con element = "Es la ruta actual" y index = "la posicion numerica"
-            const tarjeta = document.createElement("div-tarjeta");
-
-            //Le agregamos atributos
-            tarjeta.setAttribute("nombreRuta", element.nombreRuta);
-            tarjeta.setAttribute("conductor", element.conductor);
-            tarjeta.setAttribute("hora", element.hora);
-            tarjeta.setAttribute("data-id", element.id);
-
-
-            //
-            if (element.estudiantes && element.estudiantes.length > 0) { // si existe estudiantes y no esta vacio
-                tarjeta.setAttribute("estudiantes", JSON.stringify(element.estudiantes)); //Agregamos estudiantes de la lista
-            }
-
-            tarjeta.addEventListener("editar-tarjeta", (e) => {// El oyente que recibe todos los datos pasados en el setup De los eventos de las tarjetas
-                abrirModalEdicion(e.detail);//La "e" es quien recibel los parametros del evento como un json
-            });
-
-            tarjeta.addEventListener("eliminar-tarjeta", (e) => {//Tambien es el oyente que recibe todos los datos pasados en el setup De los eventos de las tarjetas
-                rutas = rutas.filter(r => r.id != e.detail.id); // cargamos todas las rutas menos la que tiene 
-                guardarRutasEnLocalStorage();
-                actualizarSelectRutas();
-                filtrarRutas();
-                renderRutas(rutas);
-                actualizarEstadisticas();
-            });
-
-            tarjeta.addEventListener("estudiante-removido", (e) => {
-                const rutaId = parseInt(e.detail.rutaId);// pasamos a entero
-                const rutaIndex = rutas.findIndex(r => r.id === rutaId);// retorna la posicion donde se encuentra el estudiante
-
-                if (rutaIndex !== -1) {
-                    rutas[rutaIndex].estudiantes = e.detail.estudiantes;
-                    guardarRutasEnLocalStorage();
-                    actualizarEstadisticas();
-                }
-            });
-
-            contenedorRutas.appendChild(tarjeta);
-        });
-    }
-
-    if (selectFiltro.value === "Ruta norte") {
-        dato_ruta.filter(r => r.nombreRuta.includes("norte")).forEach((element) => { // recorremos la lista con element = "Es la ruta actual" y index = "la posicion numerica"
-            const tarjeta = document.createElement("div-tarjeta");
-
-            //Le agregamos atributos
-            tarjeta.setAttribute("nombreRuta", element.nombreRuta);
-            tarjeta.setAttribute("conductor", element.conductor);
-            tarjeta.setAttribute("hora", element.hora);
-            tarjeta.setAttribute("data-id", element.id);
-
-
-            //
-            if (element.estudiantes && element.estudiantes.length > 0) { // si existe estudiantes y no esta vacio
-                tarjeta.setAttribute("estudiantes", JSON.stringify(element.estudiantes)); //Agregamos estudiantes de la lista
-            }
-
-            tarjeta.addEventListener("editar-tarjeta", (e) => {// El oyente que recibe todos los datos pasados en el setup De los eventos de las tarjetas
-                abrirModalEdicion(e.detail);//La "e" es quien recibel los parametros del evento como un json
-            });
-
-            tarjeta.addEventListener("eliminar-tarjeta", (e) => {//Tambien es el oyente que recibe todos los datos pasados en el setup De los eventos de las tarjetas
-                rutas = rutas.filter(r => r.id != e.detail.id); // cargamos todas las rutas menos la que tiene 
-                guardarRutasEnLocalStorage();
-                actualizarSelectRutas();
-                filtrarRutas();
-                renderRutas(rutas);
-                actualizarEstadisticas();
-            });
-
-            tarjeta.addEventListener("estudiante-removido", (e) => {
-                const rutaId = parseInt(e.detail.rutaId);// pasamos a entero
-                const rutaIndex = rutas.findIndex(r => r.id === rutaId);// retorna la posicion donde se encuentra el estudiante
-
-                if (rutaIndex !== -1) {
-                    rutas[rutaIndex].estudiantes = e.detail.estudiantes;
-                    guardarRutasEnLocalStorage();
-                    actualizarEstadisticas();
-                }
-            });
-
-            contenedorRutas.appendChild(tarjeta);
-        });
-
-    }
-
-    if(selectFiltro.value === "Ruta sur") {
-        dato_ruta.filter(r => r.nombreRuta.includes("sur")).forEach((element) => { // recorremos la lista con element = "Es la ruta actual" y index = "la posicion numerica"
-            const tarjeta = document.createElement("div-tarjeta");
-
-            //Le agregamos atributos
-            tarjeta.setAttribute("nombreRuta", element.nombreRuta);
-            tarjeta.setAttribute("conductor", element.conductor);
-            tarjeta.setAttribute("hora", element.hora);
-            tarjeta.setAttribute("data-id", element.id);
-
-
-            //
-            if (element.estudiantes && element.estudiantes.length > 0) { // si existe estudiantes y no esta vacio
-                tarjeta.setAttribute("estudiantes", JSON.stringify(element.estudiantes)); //Agregamos estudiantes de la lista
-            }
-
-            tarjeta.addEventListener("editar-tarjeta", (e) => {// El oyente que recibe todos los datos pasados en el setup De los eventos de las tarjetas
-                abrirModalEdicion(e.detail);//La "e" es quien recibel los parametros del evento como un json
-            });
-
-            tarjeta.addEventListener("eliminar-tarjeta", (e) => {//Tambien es el oyente que recibe todos los datos pasados en el setup De los eventos de las tarjetas
-                rutas = rutas.filter(r => r.id != e.detail.id); // cargamos todas las rutas menos la que tiene 
-                guardarRutasEnLocalStorage();
-                actualizarSelectRutas();
-                filtrarRutas();
-                renderRutas(rutas);
-                actualizarEstadisticas();
-            });
-
-            tarjeta.addEventListener("estudiante-removido", (e) => {
-                const rutaId = parseInt(e.detail.rutaId);// pasamos a entero
-                const rutaIndex = rutas.findIndex(r => r.id === rutaId);// retorna la posicion donde se encuentra el estudiante
-
-                if (rutaIndex !== -1) {
-                    rutas[rutaIndex].estudiantes = e.detail.estudiantes;
-                    guardarRutasEnLocalStorage();
-                    actualizarEstadisticas();
-                }
-            });
-
-            contenedorRutas.appendChild(tarjeta);
-        });
-    }
-
-    if (selectFiltro.value === "Ruta centro") {
-        dato_ruta.filter(r => r.nombreRuta.includes("centro")).forEach((element) => { // recorremos la lista con element = "Es la ruta actual" y index = "la posicion numerica"
-            const tarjeta = document.createElement("div-tarjeta");
-
-            //Le agregamos atributos
-            tarjeta.setAttribute("nombreRuta", element.nombreRuta);
-            tarjeta.setAttribute("conductor", element.conductor);
-            tarjeta.setAttribute("hora", element.hora);
-            tarjeta.setAttribute("data-id", element.id);
-
-
-            //
-            if (element.estudiantes && element.estudiantes.length > 0) { // si existe estudiantes y no esta vacio
-                tarjeta.setAttribute("estudiantes", JSON.stringify(element.estudiantes)); //Agregamos estudiantes de la lista
-            }
-
-            tarjeta.addEventListener("editar-tarjeta", (e) => {// El oyente que recibe todos los datos pasados en el setup De los eventos de las tarjetas
-                abrirModalEdicion(e.detail);//La "e" es quien recibel los parametros del evento como un json
-            });
-
-            tarjeta.addEventListener("eliminar-tarjeta", (e) => {//Tambien es el oyente que recibe todos los datos pasados en el setup De los eventos de las tarjetas
-                rutas = rutas.filter(r => r.id != e.detail.id); // cargamos todas las rutas menos la que tiene 
-                guardarRutasEnLocalStorage();
-                actualizarSelectRutas();
-                filtrarRutas();
-                renderRutas(rutas);
-                actualizarEstadisticas();
-            });
-
-            tarjeta.addEventListener("estudiante-removido", (e) => {
-                const rutaId = parseInt(e.detail.rutaId);// pasamos a entero
-                const rutaIndex = rutas.findIndex(r => r.id === rutaId);// retorna la posicion donde se encuentra el estudiante
-
-                if (rutaIndex !== -1) {
-                    rutas[rutaIndex].estudiantes = e.detail.estudiantes;
-                    guardarRutasEnLocalStorage();
-                    actualizarEstadisticas();
-                }
-            });
-
-            contenedorRutas.appendChild(tarjeta);
-        });
-
-    } else{
-         dato_ruta.forEach((element) => { // recorremos la lista con element = "Es la ruta actual" y index = "la posicion numerica"
-            const tarjeta = document.createElement("div-tarjeta");
-
-            //Le agregamos atributos
-            tarjeta.setAttribute("nombreRuta", element.nombreRuta);
-            tarjeta.setAttribute("conductor", element.conductor);
-            tarjeta.setAttribute("hora", element.hora);
-            tarjeta.setAttribute("data-id", element.id);
-
-
-            //
-            if (element.estudiantes && element.estudiantes.length > 0) { // si existe estudiantes y no esta vacio
-                tarjeta.setAttribute("estudiantes", JSON.stringify(element.estudiantes)); //Agregamos estudiantes de la lista
-            }
-
-            tarjeta.addEventListener("editar-tarjeta", (e) => {// El oyente que recibe todos los datos pasados en el setup De los eventos de las tarjetas
-                abrirModalEdicion(e.detail);//La "e" es quien recibel los parametros del evento como un json
-            });
-
-            tarjeta.addEventListener("eliminar-tarjeta", (e) => {//Tambien es el oyente que recibe todos los datos pasados en el setup De los eventos de las tarjetas
-                rutas = rutas.filter(r => r.id != e.detail.id); // cargamos todas las rutas menos la que tiene 
-                guardarRutasEnLocalStorage();
-                actualizarSelectRutas();
-                filtrarRutas();
-                renderRutas(rutas);
-                actualizarEstadisticas();
-            });
-
-            tarjeta.addEventListener("estudiante-removido", (e) => {
-                const rutaId = parseInt(e.detail.rutaId);// pasamos a entero
-                const rutaIndex = rutas.findIndex(r => r.id === rutaId);// retorna la posicion donde se encuentra el estudiante
-
-                if (rutaIndex !== -1) {
-                    rutas[rutaIndex].estudiantes = e.detail.estudiantes;
-                    guardarRutasEnLocalStorage();
-                    actualizarEstadisticas();
-                }
-            });
-
-            contenedorRutas.appendChild(tarjeta);
-        });
-    }
-
+    
+    // Mostrar todas las rutas
+    rutasFiltradas = [...rutas];
+    renderRutasFiltradas();
 }
-function abrirModalEdicion(datosRuta) { // Este es un objeto que proviene del shadow DOM
 
-    if (!datosRuta || !datosRuta.id) {// Validamos q existan y que tengan id
+function abrirModalEdicion(datosRuta) {
+
+    if (!datosRuta || !datosRuta.id) {
         console.error("No se recibieron datos validos para editar");
         return;
     }
 
-    //Mostramos en el modal
     document.getElementById('modalEditandoId').value = datosRuta.id;
     document.getElementById('modalNombreRuta').value = datosRuta.nombreRuta;
     document.getElementById('modalConductor').value = datosRuta.conductor;
     document.getElementById('modalHoraSalida').value = datosRuta.hora;
 
-    idRutaEditando = datosRuta.id;//Actualizamos la variable global
+    idRutaEditando = datosRuta.id;
 
-    modal.style.display = 'flex';// Mostramos el modal
+    modal.style.display = 'flex';
 }
 
-function cerrarModal() { // Limpuamos el modal para cuando se vuelva a abrir no tenga problemas
+function cerrarModal() {
 
     modal.style.display = 'none';
 
@@ -640,14 +566,12 @@ function cerrarModal() { // Limpuamos el modal para cuando se vuelva a abrir no 
     idRutaEditando = null;
 }
 
-function guardarCambiosRuta() {//
+function guardarCambiosRuta() {
 
-    //Leemos los valores que pasa en el modal+
     const nuevoNombre = document.getElementById('modalNombreRuta').value.trim();
     const nuevoConductor = document.getElementById('modalConductor').value.trim();
     const nuevaHora = document.getElementById('modalHoraSalida').value;
 
-    //Validamos
     if (!nuevoNombre) {
         alert('El nombre de la ruta es obligatorio');
         return;
@@ -663,15 +587,15 @@ function guardarCambiosRuta() {//
         return;
     }
 
-    const rutaOriginal = rutas.find(r => r.id === idRutaEditando);// retorna el primer valor con el que coincida la busqueda
+    const rutaOriginal = rutas.find(r => r.id === idRutaEditando);
 
-    if (!rutaOriginal) {// Si no se encuentra mostramos el error y salimos de la funcion
+    if (!rutaOriginal) {
         console.warn("No se encontro la ruta con ID:", idRutaEditando);
         alert('Error: No se encontró la ruta a editar');
         return;
     }
 
-    rutas = rutas.map(ruta => {// Guardamos los cambios de la ruta
+    rutas = rutas.map(ruta => {
         if (ruta.id === idRutaEditando) {
             return {
                 ...ruta,
@@ -685,7 +609,12 @@ function guardarCambiosRuta() {//
 
     guardarRutasEnLocalStorage();
     actualizarSelectRutas();
-    renderRutas(rutas);
+    // Re-aplicar filtro después de guardar cambios
+    if (inputFiltro) {
+        filtrarRutas();
+    } else {
+        renderRutas(rutas);
+    }
     actualizarEstadisticas();
     cerrarModal();
 }
@@ -827,13 +756,12 @@ template.innerHTML = `
 class tarjeta extends HTMLElement {
     constructor() {
 
-        super();//llamamos al constructor padre
-        this.attachShadow({ mode: "open" }); // creamos el shadow DOM para encapsulamiento
+        super();
+        this.attachShadow({ mode: "open" });
         this.shadowRoot.appendChild(template.content.cloneNode(true));
 
-        this.estudiantes = []; // array donde se almacenan los estudiantes
+        this.estudiantes = [];
 
-        //Elementos del sadow DOM
         this.nombreElement = this.shadowRoot.querySelector('.nombre-ruta');
         this.conductorElement = this.shadowRoot.querySelector('.conductor-texto');
         this.horaElement = this.shadowRoot.querySelector('.hora-texto');
@@ -844,22 +772,19 @@ class tarjeta extends HTMLElement {
 
     connectedCallback() {
 
-        //leer los atributos 
         const nombreRuta = this.getAttribute("nombreRuta");
         const conductor = this.getAttribute("conductor");
         const hora = this.getAttribute("hora");
 
-        //Asignamos los atributos
         this.nombreElement.textContent = nombreRuta
         this.conductorElement.textContent = conductor
         this.horaElement.textContent = hora
 
-        //Cargmaos los estudiantes si existen
         const estudiantesAttr = this.getAttribute("estudiantes");
         if (estudiantesAttr) {
             try {
-                this.estudiantes = JSON.parse(estudiantesAttr);// convertimos de Json a objeto
-                this.actualizarListaEstudiantes();//Mostramos la lista de estudiantes
+                this.estudiantes = JSON.parse(estudiantesAttr);
+                this.actualizarListaEstudiantes();
             } catch (e) {
                 console.log("Error al cargar estudiantes:", e);
                 this.estudiantes = [];
@@ -873,14 +798,14 @@ class tarjeta extends HTMLElement {
 
         if (!this.estudiantesContainer) return;
 
-        this.estudiantesContainer.innerHTML = "";// Limpiamos el contenedor
+        this.estudiantesContainer.innerHTML = "";
 
-        if (this.estudiantes.length === 0) { // si no hay estudiantes
+        if (this.estudiantes.length === 0) {
             this.estudiantesContainer.innerHTML = '<div class="sin-estudiantes">No hay estudiantes asignados</div>';
             return;
         }
 
-        this.estudiantes.forEach(estudiante => {// recorremos cada estudiante y creamos su elemento de forma visual
+        this.estudiantes.forEach(estudiante => {
 
             const estudianteDiv = document.createElement('div');
             estudianteDiv.className = 'estudiante';
@@ -891,7 +816,7 @@ class tarjeta extends HTMLElement {
 
             const borrarBtn = estudianteDiv.querySelector('.borrar-estudiante');
             borrarBtn.addEventListener('click', (e) => {
-                e.stopPropagation(); // evita que el evento no se propague
+                e.stopPropagation();
                 this.removerEstudiante(estudiante.id);
             });
 
@@ -900,26 +825,26 @@ class tarjeta extends HTMLElement {
     }
 
     removerEstudiante(id) {
-        this.estudiantes = this.estudiantes.filter(e => e.id !== id); // Filtramos eliminando el estudiante
-        this.actualizarListaEstudiantes();//Actualizamos visualmente
+        this.estudiantes = this.estudiantes.filter(e => e.id !== id);
+        this.actualizarListaEstudiantes();
 
-        this.dispatchEvent(new CustomEvent("estudiante-removido", { // disparamos un evento personalizado
+        this.dispatchEvent(new CustomEvent("estudiante-removido", {
             detail: {
-                rutaId: this.getAttribute("data-id"), // ID de la ruta
-                estudiantes: this.estudiantes // Lista actualizada
+                rutaId: this.getAttribute("data-id"),
+                estudiantes: this.estudiantes
             },
-            bubbles: true, // Permite que el evento suba por el DOM
-            composed: true // Permite que salga del Shadow DOM
+            bubbles: true,
+            composed: true
         }));
     }
 
-    setupEventListeners() {// Configuramos los eventos que tiene en las  rutas
+    setupEventListeners() {
 
         this.editarBtn.addEventListener("click", () => {
-            this.dispatchEvent(new CustomEvent("editar-tarjeta", {// Disparador que manda una señal al aire que luego lo captara un Listerner que obtendra los datos enviados
+            this.dispatchEvent(new CustomEvent("editar-tarjeta", {
 
-                detail: {//Datos que recibira el Listerner
-                    id: parseInt(this.getAttribute("data-id")),// ID de la ruta
+                detail: {
+                    id: parseInt(this.getAttribute("data-id")),
                     nombreRuta: this.nombreElement.textContent,
                     conductor: this.conductorElement.textContent,
                     hora: this.horaElement.textContent,
@@ -931,7 +856,7 @@ class tarjeta extends HTMLElement {
         });
 
         this.eliminarBtn.addEventListener("click", () => {
-            const confirmar = confirm(`Eliminar la ruta "${this.nombreElement.textContent}"?`); // Confirmacion para eliminar
+            const confirmar = confirm(`Eliminar la ruta "${this.nombreElement.textContent}"?`);
             if (confirmar) {
                 this.dispatchEvent(new CustomEvent("eliminar-tarjeta", {
                     detail: {
@@ -946,58 +871,54 @@ class tarjeta extends HTMLElement {
     }
 }
 
-customElements.define("div-tarjeta", tarjeta);// Finalmente regitramos
+customElements.define("div-tarjeta", tarjeta);
 
 // API DEL CLIMA 
 async function cargarClima() {
     const contenedorClima = document.getElementById('clima');
 
-    if (!contenedorClima) {// Por si x o y motivo no esta el contenedor
+    if (!contenedorClima) {
         console.error('Contenedor de clima no encontrado');
         return;
     }
 
     try {
 
-        contenedorClima.innerHTML = '<span class="clima-cargando"> Cargando clima...</span>';//Para darle dinamismo (Mientras hace la consulta)
+        contenedorClima.innerHTML = '<span class="clima-cargando"> Cargando clima...</span>';
 
 
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(// Permite acceder a la ubicacion del dispositivo
+            navigator.geolocation.getCurrentPosition(
                 async (position) => {
-                    // Si el usuario permite ubicación, usar coordenadas
                     const lat = position.coords.latitude;
                     const lon = position.coords.longitude;
                     await obtenerClimaPorCoordenadas(lat, lon);
                 },
                 async () => {
-                    // Por si el dispositivo no permite la ubicacion
                     await obtenerClimaPorCiudad(ciudadPorDeficto);
                 }
             );
         } else {
-            //Puede que el navegador pueda cargar la ubicacion
             await obtenerClimaPorCiudad(ciudadPorDeficto);
         }
 
     } catch (error) {
-        //Por si falla
         console.warn('Error al cargar el clima:', error);
         contenedorClima.innerHTML = '<span class="clima-cargando"> Error al cargar el clima</span>'
     }
 }
 
-async function obtenerClimaPorCiudad(ciudad) {//Alternativa por si no funciona el de coordenadas
+async function obtenerClimaPorCiudad(ciudad) {
     const contenedorClima = document.getElementById('clima');
 
 
     try {
         const respuesta = await fetch(
-            `https://api.weatherapi.com/v1/current.json?key=${ApiKey}&q=${ciudad}&lang=es`//Hacemos una peticion con ciudad
+            `https://api.weatherapi.com/v1/current.json?key=${ApiKey}&q=${ciudad}&lang=es`
         );
 
-        if (!respuesta.ok) {// Un error si no responde para depurar
-            throw new Error(`Error ${respuesta.status}: No se pudo obtener el clima`);// Si esto se cumple con el throw lo mandamos directamente al catch
+        if (!respuesta.ok) {
+            throw new Error(`Error ${respuesta.status}: No se pudo obtener el clima`);
         }
 
         const datos = await respuesta.json();
@@ -1005,7 +926,7 @@ async function obtenerClimaPorCiudad(ciudad) {//Alternativa por si no funciona e
 
     } catch (error) {
         console.warn('Error obteniendo clima por ciudad:', error);
-        contenedorClima.innerHTML = '<span class="clima-cargando"> Error al cargar el clima</span>'//Modificamos el contenedor del clima para depurar
+        contenedorClima.innerHTML = '<span class="clima-cargando"> Error al cargar el clima</span>'
     }
 }
 
@@ -1016,15 +937,15 @@ async function obtenerClimaPorCoordenadas(lat, lon) {
 
     try {
         const respuesta = await fetch(
-            `https://api.weatherapi.com/v1/current.json?key=${ApiKey}&q=${lat},${lon}&lang=es`//Hacemos una peticion con coordenadas
+            `https://api.weatherapi.com/v1/current.json?key=${ApiKey}&q=${lat},${lon}&lang=es`
         );
 
-        if (!respuesta.ok) {// Un error si no responde para depurar
+        if (!respuesta.ok) {
             throw new Error(`Error ${respuesta.status}: No se pudo obtener el clima`);
         }
 
-        const datos = await respuesta.json();//Pasamos la peticion a una variable con formato Json
-        actualizarInterfazClima(datos);// Si esto se cumple con el throw lo mandamos directamente al catch
+        const datos = await respuesta.json();
+        actualizarInterfazClima(datos);
 
     } catch (error) {
         console.error('Error obteniendo clima por coordenadas:', error);
@@ -1036,8 +957,6 @@ function actualizarInterfazClima(datos) {
 
     const contenedorClima = document.getElementById('clima');
 
-
-    // Extraemos los datos del clima por medio del Json
     const temperatura = Math.round(datos.current.temp_c);
     const sensacionTermica = Math.round(datos.current.feelslike_c);
     const descripcion = datos.current.condition.text;
@@ -1046,10 +965,8 @@ function actualizarInterfazClima(datos) {
     const ciudad = datos.location.name;
     const pais = datos.location.country;
     const iconoUrl = `https:${datos.current.condition.icon}`;
-    const horaLocal = datos.location.localtime;
     const esDeNoche = datos.current.is_day === 0;
 
-    //Creamos lo que se va a poner en el HTML
     contenedorClima.innerHTML = `
         <div class="clima-contenedor">
             <div class="clima-principal">
@@ -1071,7 +988,6 @@ function actualizarInterfazClima(datos) {
         </div>
     `;
 
-
     if (esDeNoche) {
         contenedorClima.classList.add('clima-nocturno');
     } else {
@@ -1083,20 +999,19 @@ function actualizarInterfazClima(datos) {
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Delay para darele dinamismo a la pagina
     setTimeout(() => {
         cargarClima();
     }, 2000);
 
-    // Atualizamos el clima
     setInterval(() => {
         cargarClima();
         console.log('Actualizando clima automáticamente...');
     }, 900000);
 });
 
-//Renderizar todo apenas se ejecute la pagina
+// ========== INICIALIZACIÓN ==========
 cargarRutasDesdeLocalStorage();
 actualizarSelectRutas();
+configurarFiltro(); // Inicializar el filtro
 renderRutas(rutas);
 actualizarEstadisticas();
